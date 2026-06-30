@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" preserveAspectRatio="xMidYMid slice">
+  <defs><pattern id="p" width="30" height="30" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="30" height="30" fill="#E5DCC9"></rect><rect width="15" height="30" fill="#DDD3BD"></rect></pattern></defs>
+  <rect width="600" height="600" fill="url(#p)"></rect>
+  <text x="28" y="566" font-family="monospace" font-size="20" fill="#6B6557">[ фото тренера ]</text>
+</svg>

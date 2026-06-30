@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 700" preserveAspectRatio="xMidYMid slice">
+  <defs><pattern id="p" width="30" height="30" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="30" height="30" fill="#27553F"></rect><rect width="15" height="30" fill="#2E5E47"></rect></pattern></defs>
+  <rect width="600" height="700" fill="url(#p)"></rect>
+  <text x="28" y="666" font-family="monospace" font-size="20" fill="#CFE0D6">[ фото Руслана · 4:5 ]</text>
+</svg>

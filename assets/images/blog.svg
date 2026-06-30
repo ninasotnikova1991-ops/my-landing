@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" preserveAspectRatio="xMidYMid slice">
+  <defs><pattern id="p" width="30" height="30" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="30" height="30" fill="#E5DCC9"></rect><rect width="15" height="30" fill="#DDD3BD"></rect></pattern></defs>
+  <rect width="640" height="480" fill="url(#p)"></rect>
+  <text x="26" y="452" font-family="monospace" font-size="18" fill="#6B6557">[ обложка ]</text>
+</svg>
