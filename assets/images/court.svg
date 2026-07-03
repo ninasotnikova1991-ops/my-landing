@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" preserveAspectRatio="xMidYMid slice">
-  <defs><pattern id="p" width="34" height="34" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="34" height="34" fill="#E5DCC9"></rect><rect width="17" height="34" fill="#DDD3BD"></rect></pattern></defs>
+  <defs><pattern id="p" width="34" height="34" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="34" height="34" fill="#524B6E"></rect><rect width="17" height="34" fill="#5E567C"></rect></pattern></defs>
   <rect width="800" height="560" fill="url(#p)"></rect>
-  <text x="32" y="528" font-family="monospace" font-size="20" fill="#6B6557">[ карта / фото площадки ]</text>
+  <text x="32" y="528" font-family="monospace" font-size="20" fill="#D2CBE6">[ карта / фото площадки ]</text>
 </svg>

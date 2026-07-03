@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" preserveAspectRatio="xMidYMid slice">
-  <defs><pattern id="p" width="36" height="36" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="36" height="36" fill="#1E4034"></rect><rect width="18" height="36" fill="#23493B"></rect></pattern></defs>
+  <defs><pattern id="p" width="36" height="36" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="36" height="36" fill="#524B6E"></rect><rect width="18" height="36" fill="#5E567C"></rect></pattern></defs>
   <rect width="960" height="540" fill="url(#p)"></rect>
-  <text x="32" y="510" font-family="monospace" font-size="20" fill="#CFE0D6">[ встроенное видео · что такое пиклбол ]</text>
+  <text x="32" y="510" font-family="monospace" font-size="20" fill="#D2CBE6">[ встроенное видео · что такое пиклбол ]</text>
 </svg>
