@@ -6,6 +6,33 @@
 (function () {
   'use strict';
 
+  /* ---------- Telegram: КУДА ПРИХОДЯТ ЗАЯВКИ ----------
+     1) Создайте бота у @BotFather → получите ТОКЕН.
+     2) Узнайте CHAT_ID (свой — через @userinfobot, либо id группы/канала).
+     Вставьте оба значения ниже. Пока не заполнено — форма просто
+     показывает «Спасибо», ничего не отправляя.                        */
+  var TG_BOT_TOKEN = 'ВСТАВЬТЕ_ТОКЕН_БОТА';
+  var TG_CHAT_ID   = 'ВСТАВЬТЕ_CHAT_ID';
+
+  function fieldLabel(name){
+    var m={name:'Имя',phone:'Телефон',branch:'Филиал',format:'Формат',date:'Дата',guests:'Гостей',contact:'Контакт'};
+    return m[name]||name;
+  }
+  function sendToTelegram(data){
+    var lines=Object.keys(data).filter(function(k){return data[k];})
+      .map(function(k){return '<b>'+k+':</b> '+String(data[k]);});
+    var text='🎾 <b>Новая заявка — Своя Кухня</b>\n\n'+lines.join('\n');
+    if(!TG_BOT_TOKEN || TG_BOT_TOKEN.indexOf('ВСТАВЬТЕ')===0 || TG_CHAT_ID.indexOf('ВСТАВЬТЕ')===0){
+      console.warn('[Telegram] не настроен: укажите TG_BOT_TOKEN и TG_CHAT_ID в js/script.js');
+      return Promise.resolve(false);
+    }
+    return fetch('https://api.telegram.org/bot'+TG_BOT_TOKEN+'/sendMessage',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({chat_id:TG_CHAT_ID,text:text,parse_mode:'HTML'})
+    }).then(function(r){return r.ok;}).catch(function(){return false;});
+  }
+
   /* ---------- Mobile menu ---------- */
   var hamburger = document.getElementById('hamburger');
   var mobileNav = document.getElementById('mobileNav');
@@ -134,8 +161,22 @@
   if (bookForm) {
     bookForm.addEventListener('submit', function (e) {
       e.preventDefault();
-      modalFormWrap.hidden = true;
-      modalSuccess.hidden = false;
+      var isParty = partyFields && !partyFields.hidden;
+      var active = isParty ? partyFields : bookFields;
+      var data = {};
+      data['Тип'] = isParty ? 'Праздник' : 'Запись';
+      data['Заявка'] = modalTitle.textContent;
+      if (modalPrice && !modalPrice.hidden) data['Тариф'] = modalPrice.textContent;
+      if (active) active.querySelectorAll('input,select').forEach(function (el) {
+        if (el.value) data[fieldLabel(el.name)] = el.value;
+      });
+      var btn = bookForm.querySelector('button[type="submit"]');
+      if (btn) btn.disabled = true;
+      sendToTelegram(data).then(function () {
+        if (btn) btn.disabled = false;
+        modalFormWrap.hidden = true;
+        modalSuccess.hidden = false;
+      });
     });
   }
   var successClose = document.getElementById('successClose');
@@ -147,8 +188,25 @@
   if (ctaForm) {
     ctaForm.addEventListener('submit', function (e) {
       e.preventDefault();
-      ctaForm.hidden = true;
-      if (ctaSuccess) ctaSuccess.hidden = false;
+      var data = { 'Заявка': 'Быстрая запись (форма внизу страницы)' };
+      ctaForm.querySelectorAll('input,select').forEach(function (el) {
+        if (el.value) data[fieldLabel(el.name)] = el.value;
+      });
+      var btn = ctaForm.querySelector('button[type="submit"]');
+      if (btn) btn.disabled = true;
+      sendToTelegram(data).then(function () {
+        ctaForm.hidden = true;
+        if (ctaSuccess) ctaSuccess.hidden = false;
+      });
     });
+  }
+
+  /* ---------- Кнопка «наверх» ---------- */
+  var toTop = document.getElementById('toTop');
+  if (toTop) {
+    var toggleTop = function () { toTop.classList.toggle('is-visible', window.scrollY > 500); };
+    window.addEventListener('scroll', toggleTop, { passive: true });
+    toggleTop();
+    toTop.addEventListener('click', function () { window.scrollTo({ top: 0, behavior: 'smooth' }); });
   }
 })();
