@@ -367,7 +367,7 @@ body{padding-bottom:76px;}
 
   /* prices */
   .free-banner{flex-direction:row;align-items:center;justify-content:space-between;padding:30px 34px;margin-bottom:30px;}
-  .free-banner h2{font-size:32px;}
+  .free-banner h2{font-size:32px;color:var(--lime);}
   .free-banner p{font-size:17px;}
   .price-grid{flex-direction:row;flex-wrap:wrap;gap:18px;}
   .price-card{flex:1 1 290px;min-width:280px;}
