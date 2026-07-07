@@ -187,7 +187,7 @@ h2{font-size:30px;line-height:1.05;font-weight:800;}
 
 /* ---------- Prices ---------- */
 .free-banner{background:linear-gradient(120deg,var(--violet-deep),var(--violet));border-radius:18px;padding:24px;color:#fff;display:flex;flex-direction:column;gap:16px;margin-bottom:24px;}
-.free-banner h2{font-size:26px;margin-bottom:6px;color:var(--lime);}
+.free-banner h2{font-size:26px;margin-bottom:6px;}
 .free-banner p{margin:0;font-size:15px;color:rgba(255,255,255,.82);}
 .price-grid{display:flex;flex-direction:column;gap:14px;}
 .price-card{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:24px;display:flex;flex-direction:column;}
@@ -367,7 +367,7 @@ body{padding-bottom:76px;}
 
   /* prices */
   .free-banner{flex-direction:row;align-items:center;justify-content:space-between;padding:30px 34px;margin-bottom:30px;}
-  .free-banner h2{font-size:32px;color:var(--lime);}
+  .free-banner h2{font-size:32px;}
   .free-banner p{font-size:17px;}
   .price-grid{flex-direction:row;flex-wrap:wrap;gap:18px;}
   .price-card{flex:1 1 290px;min-width:280px;}
@@ -442,6 +442,7 @@ body{padding-bottom:76px;}
 .section-light .sched-row .time{color:var(--violet-deep);}
 .section-light .video{background:#E7E2F3;border-color:#E7E3F2;}
 .section-light .video-note{color:#6B6580;}
+.section-light .free-banner h2{color:var(--lime);}
 
 /* ---------- Кнопка «наверх» ---------- */
 .to-top{position:fixed;right:16px;bottom:88px;z-index:45;width:50px;height:50px;border-radius:50%;border:none;background:var(--lime);color:#1c2b06;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 10px 26px rgba(180,230,60,.5);opacity:0;visibility:hidden;transform:translateY(10px);transition:opacity .25s ease,transform .25s ease,visibility .25s,background .2s ease;overflow:hidden;}
@@ -450,7 +451,17 @@ body{padding-bottom:76px;}
 .to-top.is-visible{opacity:1;visibility:visible;transform:translateY(0);}
 .to-top:hover{background:#A6DB2C;}
 
+/* ---------- Плавающая кнопка звонка ---------- */
+.call-fab{position:fixed;right:16px;bottom:152px;z-index:46;display:flex;align-items:center;gap:9px;text-decoration:none;}
+.call-fab-label{background:#151320;color:#fff;font-weight:600;font-size:13px;line-height:1;padding:8px 12px;border-radius:9px;white-space:nowrap;box-shadow:0 6px 18px rgba(0,0,0,.45);position:relative;}
+.call-fab-label::after{content:"";position:absolute;right:-4px;top:50%;width:9px;height:9px;background:#151320;transform:translateY(-50%) rotate(45deg);border-radius:1px;}
+.call-fab-btn{width:54px;height:54px;border-radius:50%;background:var(--orange);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 26px rgba(255,107,53,.5);flex-shrink:0;position:relative;transition:background .2s ease;}
+.call-fab-btn::before{content:"";position:absolute;inset:0;border-radius:50%;background:var(--orange);z-index:-1;animation:callPulse 2s ease-out infinite;}
+@keyframes callPulse{0%{transform:scale(1);opacity:.55}100%{transform:scale(1.9);opacity:0}}
+.call-fab:hover .call-fab-btn{background:var(--orange-hover);}
+
 @media (min-width:900px){
   .logo-img{height:46px;}
   .to-top{right:28px;bottom:28px;width:54px;height:54px;}
+  .call-fab{right:28px;bottom:98px;}
 }
