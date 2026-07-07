@@ -187,7 +187,7 @@ h2{font-size:30px;line-height:1.05;font-weight:800;}
 
 /* ---------- Prices ---------- */
 .free-banner{background:linear-gradient(120deg,var(--violet-deep),var(--violet));border-radius:18px;padding:24px;color:#fff;display:flex;flex-direction:column;gap:16px;margin-bottom:24px;}
-.free-banner h2{font-size:26px;color:#fff;margin-bottom:6px;}
+.free-banner h2{font-size:26px;margin-bottom:6px;}
 .free-banner p{margin:0;font-size:15px;color:rgba(255,255,255,.82);}
 .price-grid{display:flex;flex-direction:column;gap:14px;}
 .price-card{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:24px;display:flex;flex-direction:column;}
