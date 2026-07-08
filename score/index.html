@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+<title>Своя Подача — табло для пиклбола</title>
+<meta name="description" content="Своя Подача — табло для пиклбола клуба «Своя Кухня». Счёт, подача, side-out по официальным правилам." />
+<meta name="theme-color" content="#0A0A0F" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Своя Подача" />
+<meta name="mobile-web-app-capable" content="yes" />
+
+<!-- Relative paths: work in a subfolder (/score/) OR a standalone domain, unchanged -->
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png" />
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg-graphite: #0A0A0F;
+    --card-purple: #1B1229;
+    --card-purple-light: #241A38;
+    --primary-purple: #7C3AED;
+    --action-orange: #FF7A1A;
+    --action-orange-deep: #C85A0C;
+    --score-lime: #C6FF3D;
+    --text-white: #F5F5F7;
+    --text-secondary: #9096A8;
+  }
+  * { -webkit-tap-highlight-color: transparent; }
+  html, body { background: var(--bg-graphite); overscroll-behavior: none; height: 100%; }
+  body {
+    font-family: 'Inter', sans-serif; color: var(--text-white); min-height: 100dvh;
+    padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right);
+    overflow-x: hidden;
+  }
+  .font-score { font-family: 'Rajdhani', sans-serif; }
+  .ambient-glow {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(60% 40% at 50% 0%, rgba(124,58,237,0.18), transparent 70%),
+      radial-gradient(50% 30% at 50% 100%, rgba(198,255,61,0.05), transparent 70%);
+  }
+  .glow-purple { box-shadow: 0 0 0 1px rgba(124,58,237,0.35), 0 0 24px 2px rgba(124,58,237,0.25), 0 0 60px 10px rgba(124,58,237,0.08); }
+  .glow-purple-strong { box-shadow: 0 0 0 2px rgba(124,58,237,0.6), 0 0 30px 6px rgba(124,58,237,0.45), 0 0 90px 20px rgba(124,58,237,0.18); }
+  .glow-lime-text { text-shadow: 0 0 18px rgba(198,255,61,0.55), 0 0 46px rgba(198,255,61,0.25); }
+  .glow-orange { box-shadow: 0 0 0 1px rgba(255,122,26,0.4), 0 0 20px 2px rgba(255,122,26,0.35); }
+  @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(124,58,237,0.55);} 70% { box-shadow: 0 0 0 14px rgba(124,58,237,0);} 100%{ box-shadow: 0 0 0 0 rgba(124,58,237,0);} }
+  .serving-dot { animation: pulse-ring 1.8s ease-out infinite; }
+  @keyframes score-pop { 0%{transform:scale(1);} 35%{transform:scale(1.14);} 100%{transform:scale(1);} }
+  .score-pop { animation: score-pop 260ms cubic-bezier(.34,1.56,.64,1); }
+  @keyframes btn-press { 0%{transform:scale(1);} 50%{transform:scale(0.94);} 100%{transform:scale(1);} }
+  .btn-press { animation: btn-press 160ms ease-out; }
+  @keyframes banner-in { 0%{opacity:0;transform:scale(.85) translateY(8px);} 60%{opacity:1;transform:scale(1.03);} 100%{opacity:1;transform:scale(1) translateY(0);} }
+  .banner-in { animation: banner-in 420ms cubic-bezier(.34,1.56,.64,1); }
+  @keyframes confetti-fall { 0%{transform:translateY(-10vh) rotate(0);opacity:1;} 100%{transform:translateY(110vh) rotate(540deg);opacity:.9;} }
+  .confetti-piece { position:absolute; top:0; will-change:transform; animation-name:confetti-fall; animation-timing-function:linear; animation-iteration-count:1; }
+  .btn-base { min-height:64px; -webkit-user-select:none; user-select:none; touch-action:manipulation; }
+  .btn-base:active { transform: scale(0.96); }
+  .focus-ring:focus-visible { outline: 3px solid var(--score-lime); outline-offset: 2px; }
+  ::selection { background: var(--primary-purple); color: white; }
+  @media (prefers-reduced-motion: reduce) {
+    .serving-dot,.score-pop,.btn-press,.banner-in,.confetti-piece { animation: none !important; }
+  }
+</style>
+</head>
+
+<body class="relative">
+<div class="ambient-glow"></div>
+<div id="sr-live" aria-live="polite" role="status" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);"></div>
+
+<div class="relative z-10 flex flex-col min-h-[100dvh] max-w-2xl mx-auto px-4 pt-5 pb-6 gap-4">
+
+  <header class="flex items-center justify-between px-1">
+    <div class="flex items-center gap-2">
+      <div class="w-2.5 h-2.5 rounded-full" style="background: var(--score-lime); box-shadow: 0 0 10px 2px rgba(198,255,61,0.6);"></div>
+      <h1 class="text-sm font-semibold tracking-wide uppercase whitespace-nowrap" style="color: var(--text-secondary);">Своя Подача</h1>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="btn-lang" type="button" class="focus-ring btn-base flex items-center justify-center px-3 h-11 rounded-full text-sm font-bold tracking-wider"
+        style="background: var(--card-purple); border: 1px solid rgba(124,58,237,0.35); color: var(--text-white); min-height:44px;" aria-label="Сменить язык / Switch language">RU</button>
+      <button id="btn-mute" type="button" class="focus-ring btn-base flex items-center justify-center w-11 h-11 rounded-full"
+        style="background: var(--card-purple); border: 1px solid rgba(124,58,237,0.35); min-height:44px;" aria-pressed="false">
+        <svg id="icon-sound-on" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-white);">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+        </svg>
+        <svg id="icon-sound-off" class="w-5 h-5 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-white);">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <section class="grid grid-cols-2 gap-3" aria-label="Team scores">
+    <div id="card-team-1" class="team-card relative rounded-3xl p-4 flex flex-col items-center gap-1 transition-shadow duration-300" style="background: var(--card-purple); border: 1px solid rgba(124,58,237,0.25);">
+      <div class="flex items-center gap-1.5 h-4">
+        <span id="serve-dot-1" class="hidden w-2 h-2 rounded-full serving-dot" style="background: var(--score-lime); box-shadow: 0 0 8px 2px rgba(198,255,61,0.7);"></span>
+        <span id="label-team-1" class="text-[11px] font-bold tracking-[0.2em] uppercase" style="color: var(--text-secondary);">Команда 1</span>
+      </div>
+      <div id="score-team-1" class="font-score font-700 leading-none tabular-nums" style="font-size: clamp(2.5rem, 12vw, 4rem); color: var(--score-lime);">0</div>
+      <div id="badge-server-1" class="hidden text-[10px] font-bold px-2 py-0.5 rounded-full tracking-wider" style="background: var(--primary-purple); color: white;">СЕРВЕР 2</div>
+    </div>
+    <div id="card-team-2" class="team-card relative rounded-3xl p-4 flex flex-col items-center gap-1 transition-shadow duration-300" style="background: var(--card-purple); border: 1px solid rgba(124,58,237,0.25);">
+      <div class="flex items-center gap-1.5 h-4">
+        <span id="serve-dot-2" class="hidden w-2 h-2 rounded-full serving-dot" style="background: var(--score-lime); box-shadow: 0 0 8px 2px rgba(198,255,61,0.7);"></span>
+        <span id="label-team-2" class="text-[11px] font-bold tracking-[0.2em] uppercase" style="color: var(--text-secondary);">Команда 2</span>
+      </div>
+      <div id="score-team-2" class="font-score font-700 leading-none tabular-nums" style="font-size: clamp(2.5rem, 12vw, 4rem); color: var(--score-lime);">0</div>
+      <div id="badge-server-2" class="hidden text-[10px] font-bold px-2 py-0.5 rounded-full tracking-wider" style="background: var(--primary-purple); color: white;">СЕРВЕР 1</div>
+    </div>
+  </section>
+
+  <section class="flex-1 flex flex-col items-center justify-center rounded-3xl px-4 py-6 relative overflow-hidden glow-purple" style="background: linear-gradient(180deg, var(--card-purple-light), var(--card-purple));" aria-label="Current score">
+    <div id="hero-readout" class="font-score font-700 leading-none tabular-nums glow-lime-text flex items-baseline justify-center gap-2 flex-wrap" style="font-size: clamp(3.2rem, 17vw, 7rem); color: var(--score-lime);">
+      <span id="hero-serving">0</span><span style="color: var(--text-secondary);">–</span><span id="hero-receiving">0</span><span style="color: var(--text-secondary);">–</span><span id="hero-server">2</span>
+    </div>
+    <p id="status-line" class="mt-3 text-center text-sm sm:text-base font-semibold tracking-wide uppercase" style="color: var(--text-secondary); min-height: 1.5em;">Команда 1 подаёт</p>
+  </section>
+
+  <section class="grid grid-cols-2 gap-3" aria-label="Game controls">
+    <button id="btn-point" type="button" class="focus-ring btn-base rounded-2xl font-bold text-lg tracking-wide flex items-center justify-center gap-2 glow-orange" style="background: linear-gradient(160deg, var(--action-orange), var(--action-orange-deep)); color: white;">
+      <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg><span id="txt-point">Очко</span>
+    </button>
+    <button id="btn-fault" type="button" class="focus-ring btn-base rounded-2xl font-bold text-lg tracking-wide flex items-center justify-center gap-2" style="background: var(--card-purple-light); border: 1px solid rgba(124,58,237,0.4); color: var(--text-white);">
+      <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg><span id="txt-fault">Ошибка / Переход</span>
+    </button>
+    <button id="btn-undo" type="button" class="focus-ring btn-base rounded-2xl font-semibold text-base tracking-wide flex items-center justify-center gap-2" style="background: var(--card-purple); border: 1px solid rgba(124,58,237,0.25); color: var(--text-secondary);">
+      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-6.7L3 9"/></svg><span id="txt-undo">Отмена</span>
+    </button>
+    <button id="btn-newgame" type="button" class="focus-ring btn-base rounded-2xl font-semibold text-base tracking-wide flex items-center justify-center gap-2" style="background: var(--card-purple); border: 1px solid rgba(124,58,237,0.25); color: var(--text-secondary);">
+      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg><span id="txt-newgame">Новая игра</span>
+    </button>
+  </section>
+</div>
+
+<div id="victory-overlay" class="hidden fixed inset-0 z-40 flex items-center justify-center px-6" style="background: rgba(5,4,9,0.82); backdrop-filter: blur(4px);">
+  <div id="confetti-layer" class="fixed inset-0 pointer-events-none overflow-hidden"></div>
+  <div class="banner-in relative rounded-3xl px-8 py-10 flex flex-col items-center gap-4 text-center glow-purple-strong" style="background: linear-gradient(180deg, var(--card-purple-light), var(--card-purple)); max-width: 26rem; width: 100%;">
+    <div id="victory-eyebrow" class="text-xs font-bold tracking-[0.3em] uppercase" style="color: var(--score-lime);">Игра окончена</div>
+    <div id="victory-text" class="font-score font-700 leading-tight glow-lime-text" style="font-size: clamp(2rem, 9vw, 3.2rem); color: var(--score-lime);">КОМАНДА 1 ПОБЕДИЛА</div>
+    <div id="victory-score" class="text-lg font-semibold" style="color: var(--text-secondary);">11 – 6</div>
+    <button id="btn-victory-close" type="button" class="focus-ring btn-base mt-2 px-6 rounded-2xl font-bold tracking-wide" style="background: linear-gradient(160deg, var(--action-orange), var(--action-orange-deep)); color: white; min-width: 10rem;">Продолжить</button>
+  </div>
+</div>
+
+<div id="confirm-overlay" class="hidden fixed inset-0 z-50 flex items-center justify-center px-6" style="background: rgba(5,4,9,0.82); backdrop-filter: blur(4px);">
+  <div class="banner-in rounded-3xl px-7 py-8 flex flex-col items-center gap-5 text-center glow-purple" style="background: linear-gradient(180deg, var(--card-purple-light), var(--card-purple)); max-width: 24rem; width: 100%;">
+    <div id="confirm-title" class="font-semibold text-lg" style="color: var(--text-white);">Начать новую игру?</div>
+    <p id="confirm-body" class="text-sm" style="color: var(--text-secondary);">Счёт сбросится на 0–0–2, история отмен очистится.</p>
+    <div class="flex gap-3 w-full">
+      <button id="btn-confirm-cancel" type="button" class="focus-ring btn-base flex-1 rounded-2xl font-semibold" style="background: var(--card-purple); border: 1px solid rgba(124,58,237,0.3); color: var(--text-secondary);">Отмена</button>
+      <button id="btn-confirm-reset" type="button" class="focus-ring btn-base flex-1 rounded-2xl font-bold" style="background: linear-gradient(160deg, var(--action-orange), var(--action-orange-deep)); color: white;">Сбросить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ============================================================
+     MODULE: I18N — bilingual RU/EN strings. RU is the default.
+     Language choice is persisted in localStorage.
+     ============================================================ */
+  const I18N = (function () {
+    const STORAGE_KEY = 'picklepoint.lang';
+    const dict = {
+      ru: {
+        team1: 'Команда 1', team2: 'Команда 2',
+        server: 'СЕРВЕР', point: 'Очко', fault: 'Ошибка / Переход',
+        undo: 'Отмена', newgame: 'Новая игра',
+        serving: 'подаёт', gamePoint: 'Гейм-пойнт',
+        wins: 'ПОБЕДИЛА', gameOver: 'Игра окончена', continue: 'Продолжить',
+        confirmTitle: 'Начать новую игру?',
+        confirmBody: 'Счёт сбросится на 0–0–2, история отмен очистится.',
+        cancel: 'Отмена', reset: 'Сбросить',
+        srPoint: 'Очко.', srSideOut: 'Переход подачи.', srServerChange: 'Смена сервера.',
+        srUndo: 'Отмена.', srNewGame: 'Новая игра. Счёт 0 0 2.', srNothing: 'Отменять нечего.',
+        muteOn: 'Выключить звук', muteOff: 'Включить звук',
+        scoreWord: 'счёт',
+      },
+      en: {
+        team1: 'Team 1', team2: 'Team 2',
+        server: 'SERVER', point: 'Point', fault: 'Fault / Side Out',
+        undo: 'Undo', newgame: 'New Game',
+        serving: 'serving', gamePoint: 'Game Point',
+        wins: 'WINS', gameOver: 'Game Over', continue: 'Continue',
+        confirmTitle: 'Start a new game?',
+        confirmBody: 'This will reset the score to 0–0–2 and clear undo history.',
+        cancel: 'Cancel', reset: 'Reset',
+        srPoint: 'Point.', srSideOut: 'Side out.', srServerChange: 'Server change.',
+        srUndo: 'Undo.', srNewGame: 'New game. Score 0 0 2.', srNothing: 'Nothing to undo.',
+        muteOn: 'Mute sounds', muteOff: 'Unmute sounds',
+        scoreWord: 'score',
+      },
+    };
+    let current = 'ru';
+    try { const saved = localStorage.getItem(STORAGE_KEY); if (saved === 'ru' || saved === 'en') current = saved; } catch (e) {}
+    function t(key) { return dict[current][key]; }
+    function get() { return current; }
+    function set(lang) {
+      current = (lang === 'en') ? 'en' : 'ru';
+      try { localStorage.setItem(STORAGE_KEY, current); } catch (e) {}
+      document.documentElement.lang = current;
+    }
+    function toggle() { set(current === 'ru' ? 'en' : 'ru'); return current; }
+    return { t, get, set, toggle };
+  })();
+
+  /* ============================================================
+     MODULE: GameEngine — pure pickleball rules, no DOM.
+     Starts at 0-0-2 (opening anti-advantage rule).
+     ============================================================ */
+  const GameEngine = (function () {
+    const WIN_SCORE = 11, WIN_MARGIN = 2;
+    function createInitialState() { return { scoreA:0, scoreB:0, servingTeam:'A', server:2, winner:null }; }
+    function cloneState(s) { return { scoreA:s.scoreA, scoreB:s.scoreB, servingTeam:s.servingTeam, server:s.server, winner:s.winner }; }
+    function checkWinner(a, b) {
+      if (a >= WIN_SCORE && (a - b) >= WIN_MARGIN) return 'A';
+      if (b >= WIN_SCORE && (b - a) >= WIN_MARGIN) return 'B';
+      return null;
+    }
+    function getServingScore(s) { return s.servingTeam === 'A' ? s.scoreA : s.scoreB; }
+    function getReceivingScore(s) { return s.servingTeam === 'A' ? s.scoreB : s.scoreA; }
+    function isGamePoint(s) {
+      if (s.winner) return false;
+      const n = getServingScore(s) + 1;
+      return n >= WIN_SCORE && (n - getReceivingScore(s)) >= WIN_MARGIN;
+    }
+    function addPoint(s) {
+      if (s.winner) return s;
+      const n = cloneState(s);
+      if (n.servingTeam === 'A') n.scoreA += 1; else n.scoreB += 1;
+      n.winner = checkWinner(n.scoreA, n.scoreB);
+      return n;
+    }
+    function fault(s) {
+      if (s.winner) return s;
+      const n = cloneState(s);
+      if (n.server === 1) { n.server = 2; }
+      else { n.servingTeam = n.servingTeam === 'A' ? 'B' : 'A'; n.server = 1; }
+      return n;
+    }
+    function wasSideOut(prev, next) { return prev.servingTeam !== next.servingTeam; }
+    function resetGame() { return createInitialState(); }
+    return { WIN_SCORE, WIN_MARGIN, createInitialState, cloneState, checkWinner,
+      getServingScore, getReceivingScore, isGamePoint, addPoint, fault, wasSideOut, resetGame };
+  })();
+
+  /* ============================================================
+     MODULE: HistoryManager — undo stack of full snapshots.
+     ============================================================ */
+  const HistoryManager = (function () {
+    let stack = [];
+    return {
+      save: (s) => stack.push(GameEngine.cloneState(s)),
+      undo: () => stack.length ? stack.pop() : null,
+      clear: () => { stack = []; },
+      canUndo: () => stack.length > 0,
+    };
+  })();
+
+  /* ============================================================
+     MODULE: SoundManager — short synthesized cues (Web Audio).
+     No speech. Mute state persisted.
+     ============================================================ */
+  const SoundManager = (function () {
+    const STORAGE_KEY = 'picklepoint.muted';
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const supported = !!AudioCtx;
+    let ctx = null, muted = false;
+    try { muted = localStorage.getItem(STORAGE_KEY) === '1'; } catch (e) {}
+
+    function ensureContext() {
+      if (!supported) return null;
+      if (!ctx) { try { ctx = new AudioCtx(); } catch (e) { return null; } }
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+      return ctx;
+    }
+    function tone(freq, startAt, duration, type, peak) {
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.setValueAtTime(freq, startAt);
+      const vol = peak == null ? 0.18 : peak;
+      gain.gain.setValueAtTime(0.0001, startAt);
+      gain.gain.exponentialRampToValueAtTime(vol, startAt + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(startAt); osc.stop(startAt + duration + 0.02);
+    }
+    function play(name) {
+      if (!supported || muted) return;
+      const c = ensureContext(); if (!c) return;
+      const t = c.currentTime;
+      switch (name) {
+        case 'point':   tone(660, t, 0.09, 'sine', 0.20); tone(990, t + 0.09, 0.12, 'sine', 0.20); break;
+        case 'fault':   tone(392, t, 0.14, 'triangle', 0.16); break;
+        case 'sideout': tone(587, t, 0.10, 'sine', 0.18); tone(392, t + 0.10, 0.16, 'sine', 0.18); break;
+        case 'undo':    tone(260, t, 0.13, 'triangle', 0.16); break;
+        case 'newgame': tone(523, t, 0.10, 'sine', 0.16); tone(784, t + 0.10, 0.14, 'sine', 0.16); break;
+        case 'win':     tone(523, t, 0.14, 'sine', 0.20); tone(659, t + 0.14, 0.14, 'sine', 0.20);
+                        tone(784, t + 0.28, 0.16, 'sine', 0.20); tone(1047, t + 0.44, 0.30, 'sine', 0.22); break;
+      }
+    }
+    function setMuted(v) { muted = v; try { localStorage.setItem(STORAGE_KEY, v ? '1' : '0'); } catch (e) {} }
+    return { play, unlock: ensureContext, setMuted, isMuted: () => muted, isSupported: () => supported };
+  })();
+
+  /* ============================================================
+     MODULE: UIController — DOM refs & rendering.
+     ============================================================ */
+  const UIController = (function () {
+    const el = {
+      scoreTeam1: document.getElementById('score-team-1'),
+      scoreTeam2: document.getElementById('score-team-2'),
+      cardTeam1: document.getElementById('card-team-1'),
+      cardTeam2: document.getElementById('card-team-2'),
+      serveDot1: document.getElementById('serve-dot-1'),
+      serveDot2: document.getElementById('serve-dot-2'),
+      badgeServer1: document.getElementById('badge-server-1'),
+      badgeServer2: document.getElementById('badge-server-2'),
+      labelTeam1: document.getElementById('label-team-1'),
+      labelTeam2: document.getElementById('label-team-2'),
+      heroServing: document.getElementById('hero-serving'),
+      heroReceiving: document.getElementById('hero-receiving'),
+      heroServer: document.getElementById('hero-server'),
+      statusLine: document.getElementById('status-line'),
+      btnPoint: document.getElementById('btn-point'),
+      btnFault: document.getElementById('btn-fault'),
+      btnUndo: document.getElementById('btn-undo'),
+      btnNewGame: document.getElementById('btn-newgame'),
+      btnMute: document.getElementById('btn-mute'),
+      btnLang: document.getElementById('btn-lang'),
+      iconSoundOn: document.getElementById('icon-sound-on'),
+      iconSoundOff: document.getElementById('icon-sound-off'),
+      txtPoint: document.getElementById('txt-point'),
+      txtFault: document.getElementById('txt-fault'),
+      txtUndo: document.getElementById('txt-undo'),
+      txtNewGame: document.getElementById('txt-newgame'),
+      victoryOverlay: document.getElementById('victory-overlay'),
+      victoryEyebrow: document.getElementById('victory-eyebrow'),
+      victoryText: document.getElementById('victory-text'),
+      victoryScore: document.getElementById('victory-score'),
+      btnVictoryClose: document.getElementById('btn-victory-close'),
+      confirmOverlay: document.getElementById('confirm-overlay'),
+      confirmTitle: document.getElementById('confirm-title'),
+      confirmBody: document.getElementById('confirm-body'),
+      btnConfirmCancel: document.getElementById('btn-confirm-cancel'),
+      btnConfirmReset: document.getElementById('btn-confirm-reset'),
+      confettiLayer: document.getElementById('confetti-layer'),
+      srLive: document.getElementById('sr-live'),
+    };
+
+    function announceToScreenReader(text) {
+      el.srLive.textContent = '';
+      requestAnimationFrame(() => { el.srLive.textContent = text; });
+    }
+    function popScore(node) { node.classList.remove('score-pop'); void node.offsetWidth; node.classList.add('score-pop'); }
+    function pressAnimation(node) { node.classList.remove('btn-press'); void node.offsetWidth; node.classList.add('btn-press'); }
+
+    // Refresh all static (non-score) labels for the active language.
+    function applyLanguage() {
+      el.labelTeam1.textContent = I18N.t('team1');
+      el.labelTeam2.textContent = I18N.t('team2');
+      el.txtPoint.textContent = I18N.t('point');
+      el.txtFault.textContent = I18N.t('fault');
+      el.txtUndo.textContent = I18N.t('undo');
+      el.txtNewGame.textContent = I18N.t('newgame');
+      el.victoryEyebrow.textContent = I18N.t('gameOver');
+      el.btnVictoryClose.textContent = I18N.t('continue');
+      el.confirmTitle.textContent = I18N.t('confirmTitle');
+      el.confirmBody.textContent = I18N.t('confirmBody');
+      el.btnConfirmCancel.textContent = I18N.t('cancel');
+      el.btnConfirmReset.textContent = I18N.t('reset');
+      el.btnLang.textContent = I18N.get() === 'ru' ? 'EN' : 'RU';
+      el.btnMute.setAttribute('aria-label', SoundManager.isMuted() ? I18N.t('muteOff') : I18N.t('muteOn'));
+    }
+
+    function setServingCardHighlight(servingTeam) {
+      const t1 = servingTeam === 'A';
+      el.cardTeam1.classList.toggle('glow-purple', t1);
+      el.cardTeam2.classList.toggle('glow-purple', !t1);
+      el.cardTeam1.style.borderColor = t1 ? 'rgba(124,58,237,0.6)' : 'rgba(124,58,237,0.25)';
+      el.cardTeam2.style.borderColor = !t1 ? 'rgba(124,58,237,0.6)' : 'rgba(124,58,237,0.25)';
+      el.serveDot1.classList.toggle('hidden', !t1);
+      el.serveDot2.classList.toggle('hidden', t1);
+      el.badgeServer1.classList.toggle('hidden', !t1);
+      el.badgeServer2.classList.toggle('hidden', t1);
+    }
+
+    function render(state, options) {
+      options = options || {};
+      const gamePoint = GameEngine.isGamePoint(state);
+      const servingScore = GameEngine.getServingScore(state);
+      const receivingScore = GameEngine.getReceivingScore(state);
+
+      el.scoreTeam1.textContent = String(state.scoreA);
+      el.scoreTeam2.textContent = String(state.scoreB);
+      if (options.animateScores) {
+        popScore(el.scoreTeam1); popScore(el.scoreTeam2);
+        popScore(el.heroServing); popScore(el.heroReceiving);
+      }
+      el.heroServing.textContent = String(servingScore);
+      el.heroReceiving.textContent = String(receivingScore);
+      el.heroServer.textContent = String(state.server);
+
+      setServingCardHighlight(state.servingTeam);
+      el.badgeServer1.textContent = I18N.t('server') + ' ' + state.server;
+      el.badgeServer2.textContent = I18N.t('server') + ' ' + state.server;
+
+      const teamLabel = state.servingTeam === 'A' ? I18N.t('team1') : I18N.t('team2');
+      if (state.winner) {
+        el.statusLine.textContent = (state.winner === 'A' ? I18N.t('team1') : I18N.t('team2')) + ' — ' + I18N.t('wins');
+      } else if (gamePoint) {
+        el.statusLine.textContent = teamLabel + ' ' + I18N.t('serving') + ' — ' + I18N.t('gamePoint');
+      } else {
+        el.statusLine.textContent = teamLabel + ' ' + I18N.t('serving');
+      }
+
+      el.btnPoint.disabled = !!state.winner;
+      el.btnFault.disabled = !!state.winner;
+      el.btnPoint.style.opacity = state.winner ? '0.45' : '1';
+      el.btnFault.style.opacity = state.winner ? '0.45' : '1';
+      el.btnUndo.style.opacity = HistoryManager.canUndo() ? '1' : '0.45';
+    }
+
+    function spawnConfetti() {
+      const colors = ['#C6FF3D', '#7C3AED', '#FF7A1A', '#F5F5F7'];
+      el.confettiLayer.innerHTML = '';
+      for (let i = 0; i < 26; i++) {
+        const p = document.createElement('div');
+        const size = 6 + Math.random() * 6;
+        p.className = 'confetti-piece';
+        p.style.left = (Math.random() * 100) + 'vw';
+        p.style.width = size + 'px';
+        p.style.height = (size * 0.4) + 'px';
+        p.style.background = colors[i % colors.length];
+        p.style.borderRadius = '2px';
+        p.style.animationDuration = (2.2 + Math.random() * 1.6) + 's';
+        p.style.animationDelay = (Math.random() * 0.4) + 's';
+        el.confettiLayer.appendChild(p);
+      }
+      setTimeout(() => { el.confettiLayer.innerHTML = ''; }, 4200);
+    }
+
+    function showVictoryBanner(state) {
+      const label = state.winner === 'A' ? I18N.t('team1') : I18N.t('team2');
+      el.victoryText.textContent = label.toUpperCase() + ' ' + I18N.t('wins');
+      el.victoryScore.textContent = state.scoreA + ' – ' + state.scoreB;
+      el.victoryOverlay.classList.remove('hidden');
+      spawnConfetti();
+    }
+    function hideVictoryBanner() { el.victoryOverlay.classList.add('hidden'); }
+    function showConfirmModal() { el.confirmOverlay.classList.remove('hidden'); }
+    function hideConfirmModal() { el.confirmOverlay.classList.add('hidden'); }
+    function setMuteIcon(muted) {
+      el.iconSoundOn.classList.toggle('hidden', muted);
+      el.iconSoundOff.classList.toggle('hidden', !muted);
+      el.btnMute.setAttribute('aria-pressed', String(muted));
+      el.btnMute.setAttribute('aria-label', muted ? I18N.t('muteOff') : I18N.t('muteOn'));
+    }
+    function isVictoryVisible() { return !el.victoryOverlay.classList.contains('hidden'); }
+
+    return { el, render, applyLanguage, pressAnimation, showVictoryBanner, hideVictoryBanner,
+      showConfirmModal, hideConfirmModal, setMuteIcon, announceToScreenReader, isVictoryVisible };
+  })();
+
+  /* ============================================================
+     MODULE: App — coordination.
+     ============================================================ */
+  const App = (function () {
+    let state = GameEngine.createInitialState();
+    let isLocked = false;
+
+    function statusSummary(s) {
+      const label = s.servingTeam === 'A' ? I18N.t('team1') : I18N.t('team2');
+      return label + ', ' + I18N.t('scoreWord') + ' ' + GameEngine.getServingScore(s) + ' ' + GameEngine.getReceivingScore(s) + ' ' + I18N.t('server').toLowerCase() + ' ' + s.server;
+    }
+    function withLock(fn) {
+      if (isLocked) return;
+      isLocked = true;
+      try { fn(); } finally { setTimeout(() => { isLocked = false; }, 90); }
+    }
+
+    function handlePoint() {
+      withLock(() => {
+        SoundManager.unlock();
+        if (state.winner) return;
+        UIController.pressAnimation(UIController.el.btnPoint);
+        HistoryManager.save(state);
+        state = GameEngine.addPoint(state);
+        UIController.render(state, { animateScores: true });
+        if (state.winner) { SoundManager.play('win'); setTimeout(() => UIController.showVictoryBanner(state), 260); }
+        else { SoundManager.play('point'); }
+        UIController.announceToScreenReader(I18N.t('srPoint') + ' ' + statusSummary(state));
+      });
+    }
+    function handleFault() {
+      withLock(() => {
+        SoundManager.unlock();
+        if (state.winner) return;
+        UIController.pressAnimation(UIController.el.btnFault);
+        HistoryManager.save(state);
+        const prev = state;
+        state = GameEngine.fault(state);
+        UIController.render(state, { animateScores: false });
+        const sideOut = GameEngine.wasSideOut(prev, state);
+        SoundManager.play(sideOut ? 'sideout' : 'fault');
+        UIController.announceToScreenReader((sideOut ? I18N.t('srSideOut') : I18N.t('srServerChange')) + ' ' + statusSummary(state));
+      });
+    }
+    function handleUndo() {
+      withLock(() => {
+        SoundManager.unlock();
+        const restored = HistoryManager.undo();
+        if (!restored) { UIController.announceToScreenReader(I18N.t('srNothing')); return; }
+        UIController.pressAnimation(UIController.el.btnUndo);
+        const wasGameOver = !!state.winner;
+        state = restored;
+        UIController.render(state, { animateScores: true });
+        if (wasGameOver && !state.winner) UIController.hideVictoryBanner();
+        SoundManager.play('undo');
+        UIController.announceToScreenReader(I18N.t('srUndo') + ' ' + statusSummary(state));
+      });
+    }
+    function requestNewGame() { UIController.showConfirmModal(); }
+    function confirmNewGame() {
+      UIController.hideConfirmModal();
+      UIController.hideVictoryBanner();
+      HistoryManager.clear();
+      state = GameEngine.resetGame();
+      UIController.render(state, { animateScores: false });
+      SoundManager.unlock();
+      SoundManager.play('newgame');
+      UIController.announceToScreenReader(I18N.t('srNewGame'));
+    }
+    function cancelNewGame() { UIController.hideConfirmModal(); }
+    function toggleMute() {
+      const next = !SoundManager.isMuted();
+      SoundManager.setMuted(next);
+      UIController.setMuteIcon(next);
+      if (!next) { SoundManager.unlock(); SoundManager.play('fault'); }
+    }
+    function toggleLanguage() {
+      I18N.toggle();
+      UIController.applyLanguage();
+      UIController.render(state, { animateScores: false });
+    }
+
+    function bindEvents() {
+      const e = UIController.el;
+      e.btnPoint.addEventListener('click', handlePoint);
+      e.btnFault.addEventListener('click', handleFault);
+      e.btnUndo.addEventListener('click', handleUndo);
+      e.btnNewGame.addEventListener('click', requestNewGame);
+      e.btnMute.addEventListener('click', toggleMute);
+      e.btnLang.addEventListener('click', toggleLanguage);
+      e.btnVictoryClose.addEventListener('click', UIController.hideVictoryBanner);
+      e.btnConfirmCancel.addEventListener('click', cancelNewGame);
+      e.btnConfirmReset.addEventListener('click', confirmNewGame);
+
+      window.addEventListener('keydown', (ev) => {
+        const confirmOpen = !UIController.el.confirmOverlay.classList.contains('hidden');
+        if (confirmOpen) {
+          if (ev.key === 'Escape') cancelNewGame();
+          if (ev.key === 'Enter') confirmNewGame();
+          return;
+        }
+        if (ev.key === 'Escape' && UIController.isVictoryVisible()) { UIController.hideVictoryBanner(); return; }
+        switch (ev.key) {
+          case ' ': case 'ArrowUp': ev.preventDefault(); handlePoint(); break;
+          case 'ArrowDown': case 'f': case 'F': ev.preventDefault(); handleFault(); break;
+          case 'z': case 'Z': if (ev.ctrlKey || ev.metaKey) { ev.preventDefault(); handleUndo(); } break;
+          case 'n': case 'N': requestNewGame(); break;
+          case 'm': case 'M': toggleMute(); break;
+        }
+      });
+
+      let lastTouchEnd = 0;
+      document.addEventListener('touchend', (ev) => {
+        const now = Date.now();
+        if (now - lastTouchEnd <= 300) ev.preventDefault();
+        lastTouchEnd = now;
+      }, { passive: false });
+    }
+
+    function initializeGame() {
+      I18N.set(I18N.get()); // sync <html lang>
+      if (!SoundManager.isSupported()) {
+        SoundManager.setMuted(true);
+        UIController.el.btnMute.disabled = true;
+        UIController.el.btnMute.style.opacity = '0.4';
+      }
+      UIController.setMuteIcon(SoundManager.isMuted());
+      UIController.applyLanguage();
+      bindEvents();
+      UIController.render(state, { animateScores: false });
+    }
+
+    return { initializeGame };
+  })();
+
+  document.addEventListener('DOMContentLoaded', App.initializeGame);
+
+  /* Register the service worker (offline + installability). Relative path
+     so it works from a subfolder; scope is limited to this folder. */
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('service-worker.js').catch((err) => {
+        console.warn('Service worker registration failed:', err);
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>
